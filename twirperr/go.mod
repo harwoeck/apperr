@@ -1,4 +1,4 @@
-module github.com/harwoeck/apperr/twriperr
+module github.com/harwoeck/apperr/twirperr
 
 go 1.16
 
