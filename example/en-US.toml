@@ -1,0 +1,11 @@
+[CODE_Unauthenticated]
+other = "Not authenticated"
+
+[CODE_Internal]
+other = "Internal Server Error"
+
+[x]
+other = "x in english is x"
+
+[INTERNAL]
+other = "An error happend on our end. We are sorry!"
