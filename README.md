@@ -52,3 +52,9 @@ Use the `Convert` function from your installed converter to translate the `*Rend
   - ```go
     twirpError := twirperr.Convert(*RenderedError)
     ```
+- [Terminal or Console](https://pkg.go.dev/github.com/harwoeck/apperr/terminalerr)
+  - Install converter `go get github.com/harwoeck/apperr/terminalerr`
+  - ```go
+    output := terminalerr.Convert(*RenderedError)
+    fmt.Println(output)
+    ```
