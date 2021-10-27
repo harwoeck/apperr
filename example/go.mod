@@ -1,10 +1,10 @@
 module github.com/harwoeck/apperr/example
 
-go 1.16
+go 1.17
 
 require (
 	github.com/harwoeck/apperr/adapter/i18n v0.0.0
-	github.com/harwoeck/apperr/apperr v0.0.0
+	github.com/harwoeck/apperr/apperr v1.0.0
 	github.com/harwoeck/apperr/httperr v0.0.0
 	github.com/harwoeck/liblog/contract v1.1.2
 	github.com/nicksnyder/go-i18n/v2 v2.1.2
