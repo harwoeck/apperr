@@ -3,7 +3,7 @@ package apperr
 import (
 	"fmt"
 
-	"github.com/harwoeck/apperr/apperr/code"
+	"github.com/harwoeck/apperr/code"
 )
 
 // AppError represents a general application error

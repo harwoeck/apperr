@@ -39,4 +39,6 @@
 //      httpStatus, httpBody, err := httperr.Convert(*RenderedError)
 //   3) Twirp (go get github.com/harwoeck/apperr/twirperr)
 //      twirpError := twirperr.Convert(*RenderedError)
+//   4) Terminal (go get github.com/harwoeck/apperr/terminalerr)
+//      fmt.Println(terminalerr.Convert(*RenderedError))
 package apperr

@@ -3,14 +3,13 @@ package apperr
 import (
 	"fmt"
 
-	logger "github.com/harwoeck/liblog/contract"
+	"github.com/harwoeck/apperr/code"
+	"github.com/harwoeck/liblog"
 	"golang.org/x/text/language"
-
-	"github.com/harwoeck/apperr/apperr/code"
 )
 
 type RenderConfig struct {
-	Logger                logger.Logger
+	Logger                liblog.Logger
 	LocalizationProvider  LocalizationProvider
 	LocalizationLanguages []string
 }
@@ -29,7 +28,7 @@ func RenderLocalized(provider LocalizationProvider, languages ...string) RenderO
 	}
 }
 
-func EnableLogging(log logger.Logger) RenderOption {
+func EnableLogging(log liblog.Logger) RenderOption {
 	return func(renderer *RenderConfig) error {
 		renderer.Logger = log.Named("apperr")
 		return nil
@@ -50,7 +49,7 @@ type RenderedErrorLocalized struct {
 
 func Render(appError *AppError, opts ...RenderOption) (*RenderedError, error) {
 	config := &RenderConfig{
-		Logger: logger.MustNewStd(logger.DisableLogWrites()).Named("apperr"),
+		Logger: liblog.MustNewStd(liblog.DisableLogWrites()).Named("apperr"),
 	}
 	for _, opt := range opts {
 		if err := opt(config); err != nil {
