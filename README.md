@@ -37,24 +37,24 @@ rendered, _ := apperr.Render(err, apperr.RenderLocalized(adapter, "en-US"))
 
 Use the `Convert` function from your installed converter to translate the `*RenderedError` from last step to your frameworks native error type:
 
-- [GRPC](https://pkg.go.dev/github.com/harwoeck/apperr/grpcerr)
-  - Install converter `go get github.com/harwoeck/apperr/grpcerr`
+- [GRPC](https://pkg.go.dev/github.com/harwoeck/apperr/x/grpcerr)
+  - Install converter `go get github.com/harwoeck/apperr/x/grpcerr`
   - ```go
-    grpcStatus, err := grpcerr.Convert(*RenderedError)
+    grpcStatus, err := grpcerr.Convert(*finalized.Error)
     ```
-- [HTTP](https://pkg.go.dev/github.com/harwoeck/apperr/httperr)
-  - Install converter `go get github.com/harwoeck/apperr/httperr`
+- [HTTP](https://pkg.go.dev/github.com/harwoeck/apperr/x/httperr)
+  - Install converter `go get github.com/harwoeck/apperr/x/httperr`
   - ```go
-    httpStatus, httpBody, err := httperr.Convert(*RenderedError)
+    httpStatus, httpBody, err := httperr.Convert(*finalized.Error)
     ```
-- [Twirp](https://pkg.go.dev/github.com/harwoeck/apperr/twirperr)
-  - Install converter `go get github.com/harwoeck/apperr/twirperr`
+- [Twirp](https://pkg.go.dev/github.com/harwoeck/apperr/x/twirperr)
+  - Install converter `go get github.com/harwoeck/apperr/x/twirperr`
   - ```go
-    twirpError := twirperr.Convert(*RenderedError)
+    twirpError := twirperr.Convert(*finalized.Error)
     ```
-- [Terminal or Console](https://pkg.go.dev/github.com/harwoeck/apperr/terminalerr)
-  - Install converter `go get github.com/harwoeck/apperr/terminalerr`
+- [Terminal or Console](https://pkg.go.dev/github.com/harwoeck/apperr/x/terminalerr)
+  - Install converter `go get github.com/harwoeck/apperr/x/terminalerr`
   - ```go
-    output := terminalerr.Convert(*RenderedError)
+    output := terminalerr.Convert(*finalized.Error)
     fmt.Println(output)
     ```
