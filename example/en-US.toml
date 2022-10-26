@@ -8,4 +8,4 @@ other = "Internal Server Error"
 other = "x in english is x"
 
 [INTERNAL]
-other = "An error happend on our end. We are sorry!"
+other = "An error happened on our end. We are sorry!"

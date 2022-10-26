@@ -3,8 +3,8 @@ package twirperr
 import (
 	"github.com/twitchtv/twirp"
 
-	"github.com/harwoeck/apperr/apperr"
-	"github.com/harwoeck/apperr/apperr/code"
+	"github.com/harwoeck/apperr"
+	"github.com/harwoeck/apperr/code"
 )
 
 func codeToTwirp(c code.Code) twirp.ErrorCode {

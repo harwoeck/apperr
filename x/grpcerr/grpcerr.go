@@ -3,11 +3,12 @@ package grpcerr
 import (
 	"fmt"
 
-	"github.com/harwoeck/apperr/apperr"
-	"github.com/harwoeck/apperr/apperr/code"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/harwoeck/apperr/utils"
+	"github.com/harwoeck/apperr/utils/code"
 )
 
 func codeToGrpc(c code.Code) codes.Code {
@@ -45,12 +46,11 @@ func codeToGrpc(c code.Code) codes.Code {
 	case code.Unauthenticated:
 		return codes.Unauthenticated
 	default:
-		// THIS SHOULD NEVER HAPPEN
-		return codes.Internal
+		return codeToGrpc(code.Unknown)
 	}
 }
 
-func Convert(rendered *apperr.RenderedError) (*status.Status, error) {
+func Convert(rendered *utils.RenderedError) (*status.Status, error) {
 	st := status.New(codeToGrpc(rendered.Code), rendered.Message)
 
 	if rendered.Localized != nil {
@@ -63,6 +63,29 @@ func Convert(rendered *apperr.RenderedError) (*status.Status, error) {
 			return nil, fmt.Errorf("apperr/renderer/grpc.Convert: failed to append localized message to grpc status with: %v", err)
 		}
 	}
+
+	br := &errdetails.BadRequest{}
+	br.FieldViolations = append(br.FieldViolations, &errdetails.BadRequest_FieldViolation{
+		Field:       "",
+		Description: "",
+	})
+
+	qf := &errdetails.QuotaFailure{}
+	&errdetails.QuotaFailure_Violation{
+		Subject:     "",
+		Description: "",
+	}
+
+	&errdetails.PreconditionFailure_Violation{
+		Type:        "",
+		Subject:     "",
+		Description: "",
+	}
+
+	&errdetails.Help{Links: errdetails.Help_Link{
+		Description: "",
+		Url:         "",
+	}}
 
 	return st, nil
 }

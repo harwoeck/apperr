@@ -4,15 +4,19 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
-	logger "github.com/harwoeck/liblog/contract"
-	nicksnyderI18n "github.com/nicksnyder/go-i18n/v2/i18n"
-	"github.com/pelletier/go-toml"
+	"github.com/harwoeck/apperr/utils"
+
+	"github.com/BurntSushi/toml"
+	"github.com/harwoeck/liblog"
+
+	nicksnyderI18n "github.com/nicksnyder/go-nicksnyder-i18n/v2/nicksnyder-i18n"
 	"golang.org/x/text/language"
 
-	"github.com/harwoeck/apperr/adapter/i18n"
-	"github.com/harwoeck/apperr/apperr"
-	"github.com/harwoeck/apperr/httperr"
+	"github.com/harwoeck/apperr"
+	"github.com/harwoeck/apperr/x/httperr"
+	i18n "github.com/harwoeck/apperr/x/nicksnyder-i18n"
 )
 
 func main() {
@@ -28,40 +32,65 @@ func getI18nBundle() (*nicksnyderI18n.Bundle, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	b := nicksnyderI18n.NewBundle(t)
 	b.RegisterUnmarshalFunc("toml", toml.Unmarshal)
+
 	_, err = b.LoadMessageFile("en-US.toml")
+	if err != nil {
+		return nil, err
+	}
+
 	_, err = b.LoadMessageFile("de-DE.toml")
 	if err != nil {
 		return nil, err
 	}
+
 	return b, nil
 }
 
 func run() error {
-	http.Handle("/unauthenticated", middleware(handlerUnauthenticated))
-	http.Handle("/internal", middleware(handlerUnknownError))
+	b, err := getI18nBundle()
+	if err != nil {
+		return err
+	}
+
+	adapter := i18n.NewI18nAdapter(b)
+
+	http.Handle("/unauthenticated", middleware(adapter, handlerUnauthenticated))
+	http.Handle("/internal", middleware(adapter, handlerUnknownError))
+
 	return http.ListenAndServe("localhost:8080", nil)
 }
 
-func middleware(handler func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
-	b, err := getI18nBundle()
-	if err != nil {
-		panic(err)
-	}
-	adapter := i18n.NewI18nAdapter(b)
-
+func middleware(adapter utils.LocalizationProvider, handler func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		serverStart := time.Now()
+
+		err := handler(w, r)
+		if err == nil {
+			return
+		}
+
+		serverEnd := time.Now()
+
+		// convert all errors to AppError
 		var ae *apperr.AppError
-		switch err := handler(w, r).(type) {
-		case *apperr.AppError:
-			ae = err
-		default:
+		var ok bool
+		if ae, ok = err.(*apperr.AppError); !ok {
 			ae = apperr.Internal("internal server error", apperr.Localize("INTERNAL"))
 		}
 
+		requestStart, _ := time.Parse(time.RFC3339Nano, r.Header.Get("X-Request-Start"))
+
+		// append data we want on every error returned to our clients, like the request-id
+		ae.AppendOptions(
+			apperr.RequestInfo("some-random-request-uuid", ""),
+			apperr.RequestDuration(requestStart, serverStart, serverEnd, serverDuration, clientServerLatency),
+		)
+
 		rendered, err := apperr.Render(ae,
-			apperr.EnableLogging(logger.MustNewStd()),
+			apperr.EnableLogging(liblog.MustNewStd()),
 			apperr.RenderLocalized(adapter, r.Header.Get("Accept-Language")),
 		)
 		if err != nil {

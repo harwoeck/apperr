@@ -1,4 +1,4 @@
-package i18n
+package nicksnyder_i18n
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ func (a *adapter) Localize(msgID string, languages []string) (msg string, tag la
 func (a *adapter) LocalizeFromConfig(cfg interface{}, languages []string) (msg string, tag language.Tag, notFound bool, err error) {
 	locCfg, ok := cfg.(*i18n.LocalizeConfig)
 	if !ok {
-		return "", language.Und, false, fmt.Errorf("apperr/adapter/i18n.LocalizeFromConfig: unable to type assert interface cfg to *i18n.LocalizeConfig")
+		return "", language.Und, false, fmt.Errorf("apperr/adapter/nicksnyder-i18n.LocalizeFromConfig: unable to type assert interface cfg to *nicksnyder-i18n.LocalizeConfig")
 	}
 
 	msg, tag, err = i18n.NewLocalizer(a.bundle, languages...).LocalizeWithTag(locCfg)
