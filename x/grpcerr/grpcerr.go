@@ -7,8 +7,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/harwoeck/apperr/utils"
 	"github.com/harwoeck/apperr/utils/code"
+	"github.com/harwoeck/apperr/utils/finalizer"
 )
 
 func codeToGrpc(c code.Code) codes.Code {
@@ -50,7 +50,7 @@ func codeToGrpc(c code.Code) codes.Code {
 	}
 }
 
-func Convert(rendered *utils.RenderedError) (*status.Status, error) {
+func Convert(error *finalizer.Error) (*status.Status, error) {
 	st := status.New(codeToGrpc(rendered.Code), rendered.Message)
 
 	if rendered.Localized != nil {

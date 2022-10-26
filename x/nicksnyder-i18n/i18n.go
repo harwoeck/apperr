@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/harwoeck/apperr/apperr"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
+
+	"github.com/harwoeck/apperr/utils/finalizer"
 )
 
 type adapter struct {
 	bundle *i18n.Bundle
 }
 
-func (a *adapter) Localize(msgID string, languages []string) (msg string, tag language.Tag, notFound bool, err error) {
+func (a *adapter) Localize(messageID string, languages []language.Tag) (msg string, tag language.Tag, notFound bool, err error) {
 	msg, tag, err = i18n.NewLocalizer(a.bundle, languages...).LocalizeWithTag(&i18n.LocalizeConfig{
-		MessageID: msgID,
+		MessageID: messageID,
 	})
 	if err != nil && strings.Contains(err.Error(), "not found") {
 		return "", language.Und, true, nil
@@ -23,8 +24,8 @@ func (a *adapter) Localize(msgID string, languages []string) (msg string, tag la
 	return
 }
 
-func (a *adapter) LocalizeFromConfig(cfg interface{}, languages []string) (msg string, tag language.Tag, notFound bool, err error) {
-	locCfg, ok := cfg.(*i18n.LocalizeConfig)
+func (a *adapter) LocalizeAny(any interface{}, languages []language.Tag) (msg string, tag language.Tag, notFound bool, err error) {
+	locCfg, ok := any.(*i18n.LocalizeConfig)
 	if !ok {
 		return "", language.Und, false, fmt.Errorf("apperr/adapter/nicksnyder-i18n.LocalizeFromConfig: unable to type assert interface cfg to *nicksnyder-i18n.LocalizeConfig")
 	}
@@ -36,7 +37,7 @@ func (a *adapter) LocalizeFromConfig(cfg interface{}, languages []string) (msg s
 	return
 }
 
-func NewI18nAdapter(bundle *i18n.Bundle) apperr.LocalizationProvider {
+func NewI18nAdapter(bundle *i18n.Bundle) finalizer.LocalizationProvider {
 	return &adapter{
 		bundle: bundle,
 	}

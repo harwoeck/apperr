@@ -11,7 +11,7 @@ type Localized struct {
 
 type RequestInfo struct {
 	RequestID           string         `json:"requestId"`
-	RequestDuration     *time.Time     `json:"requestDuration,omitempty"`
+	RequestDuration     *time.Duration `json:"requestDuration,omitempty"`
 	ServingData         string         `json:"servingData"`
 	ApproximatedLatency *time.Duration `json:"approximatedLatency,omitempty"`
 }

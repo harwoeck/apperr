@@ -3,8 +3,8 @@ package twirperr
 import (
 	"github.com/twitchtv/twirp"
 
-	"github.com/harwoeck/apperr"
-	"github.com/harwoeck/apperr/code"
+	"github.com/harwoeck/apperr/utils/code"
+	"github.com/harwoeck/apperr/utils/finalizer"
 )
 
 func codeToTwirp(c code.Code) twirp.ErrorCode {
@@ -47,12 +47,12 @@ func codeToTwirp(c code.Code) twirp.ErrorCode {
 	}
 }
 
-func Convert(rendered *apperr.RenderedError) twirp.Error {
+func Convert(rendered *finalizer.Error) twirp.Error {
 	te := twirp.NewError(codeToTwirp(rendered.Code), rendered.Message)
 
 	if rendered.Localized != nil {
-		te = te.WithMeta("localized_message", rendered.Localized.UserMessage)
-		te = te.WithMeta("localized_message_short", rendered.Localized.UserMessageShort)
+		te = te.WithMeta("localized_message", rendered.Localized.Text)
+		te = te.WithMeta("localized_message_short", rendered.Localized.Title)
 		te = te.WithMeta("localized_locale", rendered.Localized.Locale.String())
 	}
 

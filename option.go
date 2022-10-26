@@ -28,7 +28,7 @@ type Option func(*finalizer.Error) error
 // provider for debugging.
 //
 // `approximatedLatency` should be the approximated client-to-server latency.
-func RequestInfo(requestID string, requestDuration *time.Time, servingData string, approximatedLatency *time.Duration) Option {
+func RequestInfo(requestID string, requestDuration *time.Duration, servingData string, approximatedLatency *time.Duration) Option {
 	return func(error *finalizer.Error) error {
 		error.RequestInfo = &dto.RequestInfo{
 			RequestID:           requestID,

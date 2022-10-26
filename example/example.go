@@ -6,15 +6,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/harwoeck/apperr/utils"
-
 	"github.com/BurntSushi/toml"
 	"github.com/harwoeck/liblog"
-
-	nicksnyderI18n "github.com/nicksnyder/go-nicksnyder-i18n/v2/nicksnyder-i18n"
+	nicksnyderI18n "github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 
 	"github.com/harwoeck/apperr"
+	"github.com/harwoeck/apperr/utils/finalizer"
 	"github.com/harwoeck/apperr/x/httperr"
 	i18n "github.com/harwoeck/apperr/x/nicksnyder-i18n"
 )
@@ -63,7 +61,7 @@ func run() error {
 	return http.ListenAndServe("localhost:8080", nil)
 }
 
-func middleware(adapter utils.LocalizationProvider, handler func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
+func middleware(adapter finalizer.LocalizationProvider, handler func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		serverStart := time.Now()
 
@@ -78,26 +76,29 @@ func middleware(adapter utils.LocalizationProvider, handler func(http.ResponseWr
 		var ae *apperr.AppError
 		var ok bool
 		if ae, ok = err.(*apperr.AppError); !ok {
-			ae = apperr.Internal("internal server error", apperr.Localize("INTERNAL"))
+			ae = apperr.Internal("internal server error", apperr.Localize("INTERNAL")).(*apperr.AppError)
 		}
 
 		requestStart, _ := time.Parse(time.RFC3339Nano, r.Header.Get("X-Request-Start"))
 
+		dur := serverEnd.Sub(serverStart)
+		latency := serverStart.Sub(requestStart)
+
 		// append data we want on every error returned to our clients, like the request-id
 		ae.AppendOptions(
-			apperr.RequestInfo("some-random-request-uuid", ""),
-			apperr.RequestDuration(requestStart, serverStart, serverEnd, serverDuration, clientServerLatency),
+			apperr.RequestInfo("some-random-request-uuid", &dur, "", &latency),
 		)
 
-		rendered, err := apperr.Render(ae,
-			apperr.EnableLogging(liblog.MustNewStd()),
-			apperr.RenderLocalized(adapter, r.Header.Get("Accept-Language")),
+		rendered, err := finalizer.Render(ae,
+			finalizer.WithLogger(liblog.MustNewStd()),
+			finalizer.WithLocalizationProvider(adapter),
+			finalizer.WithLanguages([]language.Tag{language.English}),
 		)
 		if err != nil {
 			panic(err)
 		}
 
-		status, body, err := httperr.Convert(rendered)
+		status, body, err := httperr.Convert(nil, rendered)
 		if err != nil {
 			panic(err)
 		}
