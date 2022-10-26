@@ -19,27 +19,27 @@
 //
 // In a middleware/interceptor:
 //
-//		// call request handler and get error back
-//		err := handler(r, w)
+//	// call request handler and get error back
+//	err := handler(r, w)
 //
-//		// check if request failed with apperr, or for unknown reasons (then
-//		// default to Internal
-//		var ae *apperr.AppError
-//		if x, ok := err.(*apperr.AppError); ok {
-//		   ae = x
-//		} else {
-//		    ae = apperr.Internal("internal error")
-//		}
+//	// check if request failed with apperr, or for unknown reasons (then
+//	// default to Internal
+//	var ae *apperr.AppError
+//	if x, ok := err.(*apperr.AppError); ok {
+//	    ae = x
+//	} else {
+//	    ae = apperr.Internal("internal error")
+//	}
 //
-//	 // get best match for user language
-//		t, q, err := language.ParseAcceptLanguage(r.Header.Get("Accept-Language"))
-//		userLang, _, _ := matcher.Match(t...)
+//	// get best match for user language
+//	t, q, err := language.ParseAcceptLanguage(r.Header.Get("Accept-Language"))
+//	userLang, _, _ := matcher.Match(t...)
 //
-//	 // finalize apperror to something we can return to users
-//		rendered := apperrutils.Render(ae, apperr.RenderLocalized(i18nAdapter, userLang))
+//	// finalize error to something we can return to users
+//	rendered := finalizer.Render(ae, finalizer.WithLocalizationProvider(i18nAdapter))
 //
-//	 // convert rendered error to the output format of our protocol
-//		httpStatus, httpBody, _ := httperr.Convert(rendered)
+//	// convert rendered error to the output format of our protocol
+//	httpStatus, httpBody, _ := httperr.Convert(rendered)
 //
 // Example Output:
 //
