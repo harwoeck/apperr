@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/harwoeck/apperr/apperr"
-	"github.com/harwoeck/apperr/apperr/code"
+	"github.com/harwoeck/apperr/utils"
+
+	"github.com/harwoeck/apperr/utils/code"
 )
 
 type jsonObjLocalized struct {
@@ -22,10 +23,10 @@ type jsonObj struct {
 }
 
 func codeToHttpStatus(c code.Code) int {
-	// mapping copied from https://cloud.google.com/apis/design/errors#handling_errors
+	// Mapping according to https://cloud.google.com/apis/design/errors#handling_errors
 	switch c {
 	case code.Canceled:
-		return 499 // https://httpstatuses.com/499
+		return 499
 	case code.Unknown:
 		return http.StatusInternalServerError
 	case code.InvalidArgument:
@@ -57,12 +58,16 @@ func codeToHttpStatus(c code.Code) int {
 	case code.Unauthenticated:
 		return http.StatusUnauthorized
 	default:
-		// THIS SHOULD NEVER HAPPEN
-		return http.StatusInternalServerError
+		return codeToHttpStatus(code.Unknown)
 	}
 }
 
-func Convert(rendered *apperr.RenderedError) (httpStatusCode int, httpBody []byte, err error) {
+type Encoder interface {
+	Encode(any) interface{}
+}
+
+func Convert(encoder Encoder, rendered *utils.RenderedError) (httpStatusCode int, httpBody []byte, err error) {
+
 	// copy rendered information to jsonObj
 	obj := &jsonObj{
 		Message: rendered.Message,

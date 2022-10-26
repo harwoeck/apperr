@@ -1,4 +1,4 @@
-package apperr
+package finalizer
 
 import "github.com/harwoeck/liblog"
 

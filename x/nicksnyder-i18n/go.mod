@@ -1,4 +1,4 @@
-module github.com/harwoeck/apperr/adapter/i18n
+module github.com/harwoeck/apperr/x/nicksnyder-i18n
 
 go 1.17
 
