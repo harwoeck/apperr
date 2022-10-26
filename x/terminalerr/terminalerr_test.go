@@ -5,30 +5,30 @@ import (
 
 	"golang.org/x/text/language"
 
-	"github.com/harwoeck/apperr/apperr"
-	"github.com/harwoeck/apperr/apperr/code"
+	"github.com/harwoeck/apperr/utils/code"
+	"github.com/harwoeck/apperr/utils/finalizer"
 )
 
 func TestConvert(t *testing.T) {
 	type args struct {
-		rendered *apperr.RenderedError
+		rendered *finalizer.Error
 	}
 	tests := []struct {
 		name string
 		args args
 		want string
 	}{
-		{"simple", args{&apperr.RenderedError{
+		{"simple", args{&finalizer.Error{
 			Code:    code.DataLoss,
 			Message: "data corrupted",
 		}}, "DataLoss: data corrupted"},
-		{"localized", args{&apperr.RenderedError{
+		{"localized", args{&finalizer.Error{
 			Code:    code.DataLoss,
 			Message: "data corrupted",
-			Localized: &apperr.RenderedErrorLocalized{
-				UserMessage:      "Daten sind verloren oder nicht mehr lesbar",
-				UserMessageShort: "Daten verloren",
-				Locale:           language.German,
+			Localized: &finalizer.Localized{
+				Locale: language.German,
+				Title:  "Daten verloren",
+				Text:   "Daten sind verloren oder nicht mehr lesbar",
 			},
 		}}, "DataLoss: data corrupted ([de] Daten verloren: Daten sind verloren oder nicht mehr lesbar)"},
 	}

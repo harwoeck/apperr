@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/harwoeck/apperr/utils"
+	"github.com/harwoeck/apperr/utils/finalizer"
 
 	"github.com/harwoeck/apperr/utils/code"
 )
@@ -66,7 +66,7 @@ type Encoder interface {
 	Encode(any) interface{}
 }
 
-func Convert(encoder Encoder, rendered *utils.RenderedError) (httpStatusCode int, httpBody []byte, err error) {
+func Convert(encoder Encoder, rendered *finalizer.Error) (httpStatusCode int, httpBody []byte, err error) {
 
 	// copy rendered information to jsonObj
 	obj := &jsonObj{
