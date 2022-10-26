@@ -76,7 +76,7 @@ func middleware(adapter finalizer.LocalizationProvider, handler func(http.Respon
 		var ae *apperr.AppError
 		var ok bool
 		if ae, ok = err.(*apperr.AppError); !ok {
-			ae = apperr.Internal("internal server error", apperr.Localize("INTERNAL")).(*apperr.AppError)
+			ae = apperr.Internal("internal server error", apperr.Localize("INTERNAL"))
 		}
 
 		requestStart, _ := time.Parse(time.RFC3339Nano, r.Header.Get("X-Request-Start"))
