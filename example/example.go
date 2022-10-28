@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/harwoeck/apperr/utils/dto"
+
 	"github.com/BurntSushi/toml"
 	"github.com/harwoeck/liblog"
 	nicksnyderI18n "github.com/nicksnyder/go-i18n/v2/i18n"
@@ -97,6 +99,11 @@ func middleware(adapter finalizer.LocalizationProvider, handler func(http.Respon
 		if err != nil {
 			panic(err)
 		}
+
+		if rendered.ErrorInfo == nil {
+			rendered.ErrorInfo = &dto.ErrorInfo{}
+		}
+		rendered.ErrorInfo.Domain = "localhost:8080"
 
 		status, body, err := httperr.Convert(nil, rendered)
 		if err != nil {
