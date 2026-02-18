@@ -1,22 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
-	"time"
-
-	"github.com/harwoeck/apperr/utils/dto"
 
 	"github.com/BurntSushi/toml"
-	"github.com/harwoeck/liblog"
+	"github.com/harwoeck/apperr"
+	"github.com/harwoeck/apperr/x/httperr"
+	i18n "github.com/harwoeck/apperr/x/i18n"
 	nicksnyderI18n "github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
-
-	"github.com/harwoeck/apperr"
-	"github.com/harwoeck/apperr/utils/finalizer"
-	"github.com/harwoeck/apperr/x/httperr"
-	i18n "github.com/harwoeck/apperr/x/nicksnyder-i18n"
 )
 
 func main() {
@@ -55,67 +50,19 @@ func run() error {
 		return err
 	}
 
-	adapter := i18n.NewI18nAdapter(b)
+	adapter := i18n.NewAdapter(b)
 
-	http.Handle("/unauthenticated", middleware(adapter, handlerUnauthenticated))
-	http.Handle("/internal", middleware(adapter, handlerUnknownError))
+	mw := httperr.NewMiddleware(
+		httperr.WithLocalizationProvider(adapter),
+		httperr.WithGetClientLanguagesFunc(func(_ context.Context) []language.Tag {
+			return []language.Tag{language.English}
+		}),
+	)
+
+	http.Handle("/unauthenticated", mw(handlerUnauthenticated))
+	http.Handle("/internal", mw(handlerUnknownError))
 
 	return http.ListenAndServe("localhost:8080", nil)
-}
-
-func middleware(adapter finalizer.LocalizationProvider, handler func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		serverStart := time.Now()
-
-		err := handler(w, r)
-		if err == nil {
-			return
-		}
-
-		serverEnd := time.Now()
-
-		// convert all errors to AppError
-		var ae *apperr.AppError
-		var ok bool
-		if ae, ok = err.(*apperr.AppError); !ok {
-			ae = apperr.Internal("internal server error", apperr.Localize("INTERNAL"))
-		}
-
-		requestStart, _ := time.Parse(time.RFC3339Nano, r.Header.Get("X-Request-Start"))
-
-		dur := serverEnd.Sub(serverStart)
-		latency := serverStart.Sub(requestStart)
-
-		// append data we want on every error returned to our clients, like the request-id
-		ae.AppendOptions(
-			apperr.RequestInfo("some-random-request-uuid", &dur, "", &latency),
-		)
-
-		rendered, err := finalizer.Render(ae,
-			finalizer.WithLogger(liblog.MustNewStd()),
-			finalizer.WithLocalizationProvider(adapter),
-			finalizer.WithLanguages([]language.Tag{language.English}),
-		)
-		if err != nil {
-			panic(err)
-		}
-
-		if rendered.ErrorInfo == nil {
-			rendered.ErrorInfo = &dto.ErrorInfo{}
-		}
-		rendered.ErrorInfo.Domain = "localhost:8080"
-
-		status, body, err := httperr.Convert(nil, rendered)
-		if err != nil {
-			panic(err)
-		}
-
-		w.WriteHeader(status)
-		_, err = w.Write(body)
-		if err != nil {
-			panic(err)
-		}
-	}
 }
 
 func handlerUnauthenticated(w http.ResponseWriter, r *http.Request) error {

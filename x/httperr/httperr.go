@@ -5,88 +5,67 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/harwoeck/apperr/utils/finalizer"
-
-	"github.com/harwoeck/apperr/utils/code"
+	"github.com/harwoeck/apperr/errdetails"
 )
 
-type jsonObjLocalized struct {
-	UserMessage      string `json:"userMessage"`
-	UserMessageShort string `json:"userMessageShort"`
-	Locale           string `json:"locale"`
-}
-
-type jsonObj struct {
-	Message   string            `json:"message"`
-	Code      string            `json:"code"`
-	Localized *jsonObjLocalized `json:"localized"`
-}
-
-func codeToHttpStatus(c code.Code) int {
+func mapHTTPStatus(c errdetails.Code) int {
 	// Mapping according to https://cloud.google.com/apis/design/errors#handling_errors
 	switch c {
-	case code.Canceled:
+	case errdetails.Canceled:
 		return 499
-	case code.Unknown:
+	case errdetails.Unknown:
 		return http.StatusInternalServerError
-	case code.InvalidArgument:
+	case errdetails.InvalidArgument:
 		return http.StatusBadRequest
-	case code.DeadlineExceeded:
+	case errdetails.DeadlineExceeded:
 		return http.StatusGatewayTimeout
-	case code.NotFound:
+	case errdetails.NotFound:
 		return http.StatusNotFound
-	case code.AlreadyExists:
+	case errdetails.AlreadyExists:
 		return http.StatusConflict
-	case code.PermissionDenied:
+	case errdetails.PermissionDenied:
 		return http.StatusForbidden
-	case code.ResourceExhausted:
+	case errdetails.ResourceExhausted:
 		return http.StatusTooManyRequests
-	case code.FailedPrecondition:
+	case errdetails.FailedPrecondition:
 		return http.StatusBadRequest
-	case code.Aborted:
+	case errdetails.Aborted:
 		return http.StatusConflict
-	case code.OutOfRange:
+	case errdetails.OutOfRange:
 		return http.StatusBadRequest
-	case code.Unimplemented:
+	case errdetails.Unimplemented:
 		return http.StatusNotImplemented
-	case code.Internal:
+	case errdetails.Internal:
 		return http.StatusInternalServerError
-	case code.Unavailable:
+	case errdetails.Unavailable:
 		return http.StatusServiceUnavailable
-	case code.DataLoss:
+	case errdetails.DataLoss:
 		return http.StatusInternalServerError
-	case code.Unauthenticated:
+	case errdetails.Unauthenticated:
 		return http.StatusUnauthorized
 	default:
-		return codeToHttpStatus(code.Unknown)
+		return http.StatusInternalServerError
 	}
 }
 
-type Encoder interface {
-	Encode(any) interface{}
-}
-
-func Convert(encoder Encoder, rendered *finalizer.Error) (httpStatusCode int, httpBody []byte, err error) {
-
-	// copy rendered information to jsonObj
-	obj := &jsonObj{
-		Message: rendered.Message,
-		Code:    rendered.Code.String(),
-	}
-	if rendered.Localized != nil {
-		obj.Localized = &jsonObjLocalized{
-			UserMessage:      rendered.Localized.UserMessage,
-			UserMessageShort: rendered.Localized.UserMessageShort,
-			Locale:           rendered.Localized.Locale.String(),
-		}
+// Convert transforms a resolved apperr error into an HTTP status code and
+// a JSON-encoded body. The body is the JSON representation of the full
+// ResolvedError, giving clients access to all detail types (localized
+// messages, field violations, error info, etc.).
+//
+// The keepDebugInfo parameter controls whether [errdetails.DebugInfo] is
+// included in the response. Pass false in production to ensure server-side
+// debugging information (stack traces, internal details) is never leaked to
+// clients. When false, resolved.DebugInfo is stripped before conversion.
+func Convert(resolved *errdetails.ResolvedError, keepDebugInfo bool) (httpStatusCode int, httpBody []byte, err error) {
+	if !keepDebugInfo {
+		resolved.DebugInfo = nil
 	}
 
-	// json encode jsonObj into bytes buffer
-	buf, err := json.MarshalIndent(obj, "", "  ")
+	body, err := json.Marshal(resolved)
 	if err != nil {
-		return 0, nil, fmt.Errorf("apper/renderer/httperr.Convert: failed to encode json object with: %v", err)
+		return 0, nil, fmt.Errorf("httperr.Convert: failed to marshal resolved error: %w", err)
 	}
 
-	// return final http error
-	return codeToHttpStatus(rendered.Code), buf, nil
+	return mapHTTPStatus(resolved.Code), body, nil
 }

@@ -1,46 +1,46 @@
-package twirperr
+package grpcerr
 
 import (
 	"github.com/harwoeck/apperr/errdetails"
-	"github.com/twitchtv/twirp"
+	"google.golang.org/grpc/codes"
 )
 
-func mapCode(c errdetails.Code) twirp.ErrorCode {
+func mapCode(c errdetails.Code) codes.Code {
 	switch c {
 	case errdetails.Canceled:
-		return twirp.Canceled
+		return codes.Canceled
 	case errdetails.Unknown:
-		return twirp.Unknown
+		return codes.Unknown
 	case errdetails.InvalidArgument:
-		return twirp.InvalidArgument
+		return codes.InvalidArgument
 	case errdetails.DeadlineExceeded:
-		return twirp.DeadlineExceeded
+		return codes.DeadlineExceeded
 	case errdetails.NotFound:
-		return twirp.NotFound
+		return codes.NotFound
 	case errdetails.AlreadyExists:
-		return twirp.AlreadyExists
+		return codes.AlreadyExists
 	case errdetails.PermissionDenied:
-		return twirp.PermissionDenied
+		return codes.PermissionDenied
 	case errdetails.ResourceExhausted:
-		return twirp.ResourceExhausted
+		return codes.ResourceExhausted
 	case errdetails.FailedPrecondition:
-		return twirp.FailedPrecondition
+		return codes.FailedPrecondition
 	case errdetails.Aborted:
-		return twirp.Aborted
+		return codes.Aborted
 	case errdetails.OutOfRange:
-		return twirp.OutOfRange
+		return codes.OutOfRange
 	case errdetails.Unimplemented:
-		return twirp.Unimplemented
+		return codes.Unimplemented
 	case errdetails.Internal:
-		return twirp.Internal
+		return codes.Internal
 	case errdetails.Unavailable:
-		return twirp.Unavailable
+		return codes.Unavailable
 	case errdetails.DataLoss:
-		return twirp.DataLoss
+		return codes.DataLoss
 	case errdetails.Unauthenticated:
-		return twirp.Unauthenticated
+		return codes.Unauthenticated
 	default:
 		// THIS SHOULD NEVER HAPPEN
-		return twirp.Internal
+		return codes.Internal
 	}
 }

@@ -1,4 +1,4 @@
-package twirperr
+package grpcerr
 
 import (
 	"context"
@@ -8,11 +8,13 @@ import (
 	"github.com/harwoeck/apperr"
 	"github.com/harwoeck/apperr/errdetails"
 	"github.com/harwoeck/apperr/resolve"
-	"github.com/twitchtv/twirp"
 	"golang.org/x/text/language"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-// InterceptorOption configures the Twirp interceptor.
+// InterceptorOption configures the gRPC server interceptors.
 type InterceptorOption func(*interceptor)
 
 // WithLocalizationProvider sets the localization provider used to translate
@@ -63,7 +65,8 @@ func DisableLocalizationBestEffort() InterceptorOption {
 type GetLogFunc func(ctx context.Context) *slog.Logger
 
 // GetClientLanguagesFunc returns the preferred language tags for the
-// current request, typically parsed from the Accept-Language header.
+// current request, typically parsed from the Accept-Language header or gRPC
+// metadata.
 type GetClientLanguagesFunc func(ctx context.Context) []language.Tag
 
 type interceptor struct {
@@ -74,15 +77,7 @@ type interceptor struct {
 	debugInfo              bool
 }
 
-// NewInterceptor creates a twirp.Interceptor that catches *apperr.AppError
-// values, resolves them through the localization pipeline, and converts them
-// into twirp.Error responses. Errors that are already twirp.Error are passed
-// through unchanged. Any other error type is wrapped as an internal error.
-//
-// All parameters are optional. Without a LocalizationProvider, errors are
-// resolved without translation. Without a GetLogFunc, a noop logger is used.
-// Without a GetClientLanguagesFunc, no language preference is applied.
-func NewInterceptor(opts ...InterceptorOption) twirp.Interceptor {
+func newInterceptor(opts []InterceptorOption) *interceptor {
 	noopLog := errdetails.NewNoopSlogLogger()
 	i := &interceptor{
 		getLog:                 func(_ context.Context) *slog.Logger { return noopLog },
@@ -92,30 +87,63 @@ func NewInterceptor(opts ...InterceptorOption) twirp.Interceptor {
 	for _, opt := range opts {
 		opt(i)
 	}
+	return i
+}
 
-	return func(next twirp.Method) twirp.Method {
-		return func(ctx context.Context, request any) (any, error) {
-			result, err := next(ctx, request)
-			if err == nil {
-				return result, nil
-			}
-
-			return nil, i.handleError(ctx, err)
+// NewUnaryServerInterceptor creates a grpc.UnaryServerInterceptor that
+// catches *apperr.AppError values, resolves them through the localization
+// pipeline, and converts them into gRPC status errors with rich error
+// details attached. Errors that are already gRPC status errors are passed
+// through unchanged. Any other error type is wrapped as an internal error.
+//
+// All parameters are optional. Without a LocalizationProvider, errors are
+// resolved without translation. Without a GetLogFunc, a noop logger is used.
+// Without a GetClientLanguagesFunc, no language preference is applied.
+func NewUnaryServerInterceptor(opts ...InterceptorOption) grpc.UnaryServerInterceptor {
+	i := newInterceptor(opts)
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		resp, err := handler(ctx, req)
+		if err == nil {
+			return resp, nil
 		}
+
+		return nil, i.handleError(ctx, err)
+	}
+}
+
+// NewStreamServerInterceptor creates a grpc.StreamServerInterceptor that
+// catches *apperr.AppError values, resolves them through the localization
+// pipeline, and converts them into gRPC status errors with rich error
+// details attached. Errors that are already gRPC status errors are passed
+// through unchanged. Any other error type is wrapped as an internal error.
+//
+// All parameters are optional. Without a LocalizationProvider, errors are
+// resolved without translation. Without a GetLogFunc, a noop logger is used.
+// Without a GetClientLanguagesFunc, no language preference is applied.
+func NewStreamServerInterceptor(opts ...InterceptorOption) grpc.StreamServerInterceptor {
+	i := newInterceptor(opts)
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		err := handler(srv, ss)
+		if err == nil {
+			return nil
+		}
+
+		return i.handleError(ss.Context(), err)
 	}
 }
 
 func (i *interceptor) handleError(ctx context.Context, err error) error {
 	log := i.getLog(ctx)
 
-	var te twirp.Error
-	if errors.As(err, &te) {
-		return te
+	// If the error is already a gRPC status, pass it through.
+	var se interface{ GRPCStatus() *status.Status }
+	if errors.As(err, &se) {
+		return err
 	}
 
 	var e *apperr.AppError
 	if !errors.As(err, &e) {
-		log.Warn("unknown error type arrived at twirperr.Interceptor. Using an internal twirp error without any infos attached",
+		log.Warn("unknown error type arrived at grpcerr interceptor. Using an internal gRPC error without any infos attached",
 			slog.Any("error", err))
 		e = apperr.Internal("")
 	}
@@ -131,20 +159,20 @@ func (i *interceptor) handleError(ctx context.Context, err error) error {
 	resolved, localizationFailed, resolveErr := resolve.Error(e, resolveOpts...)
 	if resolveErr != nil {
 		if !localizationFailed || !i.localizationBestEffort {
-			log.Warn("failed to resolve error, using internal twirp error without any infos attached, as failsafe",
+			log.Warn("failed to resolve error, using internal gRPC error without any infos attached, as failsafe",
 				slog.Any("error", resolveErr))
-			return twirp.InternalError("")
+			return status.Error(codes.Internal, "")
 		}
 		log.Warn("localization failed, continuing with resolved error without translation (best-effort)",
 			slog.Any("error", resolveErr))
 	}
 
-	te, convertErr := Convert(resolved, i.debugInfo)
+	st, convertErr := Convert(resolved, i.debugInfo)
 	if convertErr != nil {
-		log.Warn("failed to convert resolved error to twirp error. using internal twirp error, as failsafe",
+		log.Warn("failed to convert resolved error to gRPC status. using internal gRPC error, as failsafe",
 			slog.Any("error", convertErr))
-		return twirp.InternalError("")
+		return status.Error(codes.Internal, "")
 	}
 
-	return te
+	return st.Err()
 }

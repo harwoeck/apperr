@@ -1,8 +1,5 @@
 module github.com/harwoeck/apperr
 
-go 1.17
+go 1.25.0
 
-require (
-	github.com/harwoeck/liblog v1.2.0
-	golang.org/x/text v0.4.0
-)
+require golang.org/x/text v0.34.0
