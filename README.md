@@ -50,7 +50,7 @@ log structured diagnostics — all without the business logic that created
 the error needing to know about any of it.
 
 This separation is what makes the ready-made
-[interceptors](#interceptors) for Connect RPC, gRPC, and Twirp possible:
+[interceptors](#interceptors--middleware) for Connect RPC, gRPC, and Twirp possible:
 they catch a plain `*apperr.AppError`, resolve it with localization, and
 convert it to the framework-native error type in one place. Your business
 logic never imports a transport package or concerns itself with how a
@@ -128,7 +128,7 @@ return errors.NotFound("book not found", "BOOK_NOT_FOUND", nil,
 ```
 
 An explicit `apperr.Localize(...)` in `opts` overrides the automatic
-value (last write wins).
+value ([last write wins](#option-semantics)).
 
 ## Convert and Interceptors
 
