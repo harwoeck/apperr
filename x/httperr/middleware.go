@@ -152,6 +152,13 @@ func (m *middleware) handleError(w http.ResponseWriter, r *http.Request, err err
 		return
 	}
 
+	// Forward resolved headers to the HTTP response.
+	for key, values := range resolved.Headers {
+		for _, v := range values {
+			w.Header().Add(key, v)
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_, _ = w.Write(body)

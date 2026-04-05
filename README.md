@@ -308,12 +308,19 @@ depends on the detail type:
 |---|---|
 | **Last write wins** — only the final option of this type takes effect | `RequestInfo`, `ResourceInfo`, `ErrorInfo`, `Localize` / `LocalizeAny`, `RetryInfo` |
 | **Append** — every option adds to a list; all entries are preserved | `HelpLink`, `FieldViolation`, `PreconditionViolation`, `QuotaViolation` |
+| **Aggregate** — values are merged into a single `http.Header` map via `Add` | `Headers` |
 
 For the "last write wins" types, if you attach two options of the same
 kind (e.g. two `Localize` calls), only the last one is used — with no
 warning or error. This is intentional and enables patterns like
 `stricterr.LocalizeWithReason()` where an automatic option can be
 overridden by an explicit one.
+
+`Headers` is the exception: it uses **aggregate** semantics. Each
+`Headers(…)` call merges its entries into a shared `http.Header` map
+via `Add`, so values from multiple call sites are preserved. This
+allows different parts of the application to contribute response
+headers independently.
 
 ---
 

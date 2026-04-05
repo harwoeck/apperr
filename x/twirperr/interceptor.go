@@ -146,5 +146,17 @@ func (i *interceptor) handleError(ctx context.Context, err error) error {
 		return twirp.InternalError("")
 	}
 
+	// Forward resolved headers to the HTTP response via Twirp's
+	// context-based header API.
+	for key, values := range resolved.Headers {
+		for _, v := range values {
+			if hdErr := twirp.AddHTTPResponseHeader(ctx, key, v); hdErr != nil {
+				log.Warn("failed to set HTTP response header from resolved error",
+					slog.String("header", key),
+					slog.Any("error", hdErr))
+			}
+		}
+	}
+
 	return te
 }

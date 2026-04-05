@@ -11,6 +11,7 @@ import (
 	"golang.org/x/text/language"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -172,6 +173,15 @@ func (i *interceptor) handleError(ctx context.Context, err error) error {
 		log.Warn("failed to convert resolved error to gRPC status. using internal gRPC error, as failsafe",
 			slog.Any("error", convertErr))
 		return status.Error(codes.Internal, "")
+	}
+
+	// Forward resolved headers as gRPC response metadata.
+	if len(resolved.Headers) > 0 {
+		md := metadata.MD(resolved.Headers)
+		if mdErr := grpc.SetHeader(ctx, md); mdErr != nil {
+			log.Warn("failed to set gRPC response headers from resolved error",
+				slog.Any("error", mdErr))
+		}
 	}
 
 	return st.Err()

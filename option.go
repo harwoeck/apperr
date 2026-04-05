@@ -1,6 +1,7 @@
 package apperr
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/harwoeck/apperr/errdetails"
@@ -400,4 +401,36 @@ func DebugInfo(stackEntries []string, detail string) DebugInfoOption {
 		StackEntries: stackEntries,
 		Detail:       detail,
 	}
+}
+
+// HeadersOption is an Option that adds HTTP headers to the resolved error.
+// Unlike most scalar detail types, HeadersOption uses aggregate semantics:
+// values from multiple HeadersOption instances are merged (via
+// [http.Header.Add]) rather than overwritten. This allows separate parts
+// of the application to contribute headers independently.
+type HeadersOption http.Header
+
+// Apply implements Option. Headers are aggregated: values from multiple
+// HeadersOption instances are merged rather than overwritten.
+func (o HeadersOption) Apply(ue *errdetails.UnresolvedError) error {
+	if ue.Headers == nil {
+		ue.Headers = make(http.Header)
+	}
+	for key, values := range http.Header(o) {
+		for _, v := range values {
+			ue.Headers.Add(key, v)
+		}
+	}
+	return nil
+}
+
+// Headers returns an Option that attaches the given HTTP headers to the
+// error. These headers are forwarded by transport-layer interceptors and
+// middlewares (e.g. set on the [http.ResponseWriter] by httperr, or added
+// to [connect.Error] metadata by connecterr).
+//
+// Multiple Headers options are aggregated — all entries are preserved.
+// This differs from scalar detail types where the last option wins.
+func Headers(headers http.Header) Option {
+	return HeadersOption(headers)
 }

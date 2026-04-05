@@ -1,6 +1,8 @@
 package errdetails
 
 import (
+	"net/http"
+
 	"golang.org/x/text/language"
 )
 
@@ -83,6 +85,7 @@ type DebugInfo struct {
 type UnresolvedError struct {
 	Code                   Code
 	Message                string
+	Headers                http.Header
 	RawLocalized           *RawLocalized
 	Localized              *LocalizedMessage
 	RequestInfo            *RequestInfo
@@ -100,8 +103,13 @@ type UnresolvedError struct {
 // ResolvedError is the fully resolved form of an AppError, ready for
 // conversion to a framework-specific error type by an x/ converter.
 type ResolvedError struct {
-	Code                   Code                      `json:"code"`
-	Message                string                    `json:"message"`
+	Code    Code   `json:"code"`
+	Message string `json:"message"`
+	// Headers holds HTTP headers that should be sent alongside the error
+	// response. They are excluded from JSON serialization and are instead
+	// applied directly by the transport-layer interceptor or middleware
+	// if applicable for the framework in use.
+	Headers                http.Header               `json:"-"`
 	Localized              *LocalizedMessage         `json:"localized,omitempty"`
 	RequestInfo            *RequestInfo              `json:"requestInfo,omitempty"`
 	ResourceInfo           *ResourceInfo             `json:"resourceInfo,omitempty"`

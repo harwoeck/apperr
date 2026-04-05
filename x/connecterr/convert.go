@@ -24,6 +24,14 @@ func Convert(resolved *errdetails.ResolvedError, keepDebugInfo bool) (*connect.E
 
 	ce := connect.NewError(mapCode(resolved.Code), errors.New(resolved.Message))
 
+	// Forward resolved headers as connect error metadata. These are sent
+	// as HTTP trailers (streaming) or headers (unary) in the error response.
+	for key, values := range resolved.Headers {
+		for _, v := range values {
+			ce.Meta().Add(key, v)
+		}
+	}
+
 	for _, msg := range protoerr.Details(resolved) {
 		detail, err := connect.NewErrorDetail(msg)
 		if err != nil {

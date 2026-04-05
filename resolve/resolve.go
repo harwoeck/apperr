@@ -115,6 +115,7 @@ func Error(appErr *apperr.AppError, opts ...Option) (resolved *errdetails.Resolv
 	resolved = &errdetails.ResolvedError{
 		Code:                   u.Code,
 		Message:                u.Message,
+		Headers:                u.Headers,
 		Localized:              u.Localized,
 		RequestInfo:            u.RequestInfo,
 		ResourceInfo:           u.ResourceInfo,
