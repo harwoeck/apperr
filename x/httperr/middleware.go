@@ -40,6 +40,14 @@ func WithGetClientLanguagesFunc(f GetClientLanguagesFunc) MiddlewareOption {
 	}
 }
 
+// WithEnrichFunc sets the function used to enrich errors with additional
+// request-scoped context before they are returned to the client.
+func WithEnrichFunc(f EnrichFunc) MiddlewareOption {
+	return func(m *middleware) {
+		m.enrich = f
+	}
+}
+
 // EnableDebugInfo opts in to forwarding [errdetails.DebugInfo] to clients.
 // By default, debug information (stack traces, internal details) is stripped
 // from responses before conversion — secure by default. Only enable this in
@@ -67,6 +75,11 @@ type GetLogFunc func(ctx context.Context) *slog.Logger
 // current request, typically parsed from the Accept-Language header.
 type GetClientLanguagesFunc func(ctx context.Context) []language.Tag
 
+// EnrichFunc is called before an error is returned to the client, allowing
+// additional context from the request (e.g. request ID) to be attached to the
+// error via err.AppendOptions.
+type EnrichFunc func(ctx context.Context, err *apperr.AppError)
+
 // HandlerFunc is like [http.HandlerFunc] but returns an error. The
 // middleware catches any returned error, resolves it, and writes the
 // appropriate JSON error response. A nil return means the handler has
@@ -79,6 +92,7 @@ type middleware struct {
 	getLangs               GetClientLanguagesFunc
 	localizationBestEffort bool
 	debugInfo              bool
+	enrich                 EnrichFunc
 }
 
 // NewMiddleware creates HTTP middleware that catches [*apperr.AppError]
@@ -122,6 +136,10 @@ func (m *middleware) handleError(w http.ResponseWriter, r *http.Request, err err
 		log.Warn("unknown error type arrived at httperr.Middleware. Using an internal error without any infos attached",
 			slog.Any("error", err))
 		e = apperr.Internal("")
+	}
+
+	if m.enrich != nil {
+		m.enrich(r.Context(), e)
 	}
 
 	resolveOpts := []resolve.Option{resolve.WithLogger(log)}

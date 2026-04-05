@@ -42,6 +42,14 @@ func WithGetClientLanguagesFunc(f GetClientLanguagesFunc) InterceptorOption {
 	}
 }
 
+// WithEnrichFunc sets the function used to enrich errors with additional
+// request-scoped context before they are returned to the client.
+func WithEnrichFunc(f EnrichFunc) InterceptorOption {
+	return func(i *interceptor) {
+		i.enrich = f
+	}
+}
+
 // EnableDebugInfo opts in to forwarding [errdetails.DebugInfo] to clients.
 // By default, debug information (stack traces, internal details) is stripped
 // from responses before conversion — secure by default. Only enable this in
@@ -70,12 +78,18 @@ type GetLogFunc func(ctx context.Context) *slog.Logger
 // metadata.
 type GetClientLanguagesFunc func(ctx context.Context) []language.Tag
 
+// EnrichFunc is called before an error is returned to the client, allowing
+// additional context from the request (e.g. request ID) to be attached to the
+// error via err.AppendOptions.
+type EnrichFunc func(ctx context.Context, err *apperr.AppError)
+
 type interceptor struct {
 	adapter                errdetails.LocalizationProvider
 	getLog                 GetLogFunc
 	getLangs               GetClientLanguagesFunc
 	localizationBestEffort bool
 	debugInfo              bool
+	enrich                 EnrichFunc
 }
 
 func newInterceptor(opts []InterceptorOption) *interceptor {
@@ -147,6 +161,10 @@ func (i *interceptor) handleError(ctx context.Context, err error) error {
 		log.Warn("unknown error type arrived at grpcerr interceptor. Using an internal gRPC error without any infos attached",
 			slog.Any("error", err))
 		e = apperr.Internal("")
+	}
+
+	if i.enrich != nil {
+		i.enrich(ctx, e)
 	}
 
 	resolveOpts := []resolve.Option{resolve.WithLogger(log)}
